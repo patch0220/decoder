@@ -1,12 +1,11 @@
 /*
    Author: Patrich Paolo Datu
    Notes:
-   This solution only solves for a small set of keys(e.g. the sample inputs), up to 27 keys only.
+   This will now cover the maximum number of keys for input
    I am still unsure on what to do with the remaining message after reading a zero length segment. I just relied on this part "the message is decoded by translating the keys in the segments one-at-a-time into the header characters to which they have been mapped."
 
    TODOs:
    - Readline for input
-   - create a finite 2d array for storing the map instead of using a hardcoded map, not relying on the string value but on the decimal value of the binary key when converted.
 */
 
 package main
@@ -17,63 +16,6 @@ import (
 )
 
 func main() {
-	hashmap := map[string]string{
-		"0":     "",
-		"00":    "",
-		"01":    "",
-		"10":    "",
-		"000":   "",
-		"001":   "",
-		"010":   "",
-		"011":   "",
-		"100":   "",
-		"101":   "",
-		"110":   "",
-		"0000":  "",
-		"0001":  "",
-		"0010":  "",
-		"0011":  "",
-		"0100":  "",
-		"0101":  "",
-		"0110":  "",
-		"0111":  "",
-		"1000":  "",
-		"1001":  "",
-		"1010":  "",
-		"1011":  "",
-		"1100":  "",
-		"1101":  "",
-		"1110":  "",
-		"00000": ""}
-
-	keys := [...]string{
-		"0",
-		"00",
-		"01",
-		"10",
-		"000",
-		"001",
-		"010",
-		"011",
-		"100",
-		"101",
-		"110",
-		"0000",
-		"0001",
-		"0010",
-		"0011",
-		"0100",
-		"0101",
-		"0110",
-		"0111",
-		"1000",
-		"1001",
-		"1010",
-		"1011",
-		"1100",
-		"1101",
-		"1110",
-		"00000"}
 	array := [...]string{"TNM AEIOU",
 		"0010101100011",
 		"1010001001110110011",
@@ -93,7 +35,7 @@ func main() {
 		} else {
 			messages[pointer] += array[i]
 			if strings.HasSuffix(array[i], "000") {
-				strings.TrimSuffix(messages[pointer], "000")
+				//strings.TrimSuffix(messages[pointer], "000")
 				pointer += 1
 			}
 		}
@@ -101,54 +43,67 @@ func main() {
 	for i := 0; i < len(headers); i += 1 {
 		// fmt.Println("Evaluating: ", headers[i], " - ", messages[i])
 		// Generate Map
-		for m := 0; m < len(headers[i]); m += 1 {
-			hashmap[keys[m]] = string(headers[i][m])
+		var twod [8][127]string // 0-7 length and 0-126 possible keys
+		l := 0
+		for j := 1; j < 8; j += 1 {
+			for k := 0; k < (poweroftwo(j)-1) && l < len(headers[i]); k += 1 {
+				twod[j][k] = string(headers[i][l])
+				l++
+			}
 		}
-
+		// fmt.Println("map: ", twod)
 		// Loop
 		first := 0
 		for {
 			// Get first 3 and evaluate length
 			last := first + 3
-			length := length(messages[i][first:last])
+			length := bintodec(messages[i][first:last])
 			if length != 0 {
 				// Loop until substring is equal to ones(length)
 				first = last
 				last = last + length
 				for {
-					// fmt.Println("Checking map: ", messages[i][first:last], hashmap[messages[i][first:last]])
+					// fmt.Println("Checking map: ", messages[i][first:last], twod[length][bintodec(messages[i][first:last])])
 					if messages[i][first:last] == ones(length) {
 						first = last
 						break
 					} else {
-						fmt.Printf(hashmap[messages[i][first:last]])
+						fmt.Printf(twod[length][bintodec(messages[i][first:last])])
 						first = last
 						last = last + length
 					}
 				}
 			} else {
 				// Translating keys one at a time
+				length = 1
 				first = last
 				last = last + 1
 				if last < len(messages[i]) {
 					for {
-						// fmt.Println("Checking map: ", messages[i][first:last], hashmap[messages[i][first:last]])
-						if messages[i][first:last] == ones(1) {
+						// fmt.Println("Checking map: ", messages[i][first:last], twod[length][bintodec(messages[i][first:last])])
+						if messages[i][first:last] == ones(length) {
 							first = last
 							break
 						} else {
-							fmt.Printf(hashmap[messages[i][first:last]])
+							fmt.Printf(twod[length][bintodec(messages[i][first:last])])
 							first = last
-							last = last + 1
+							last = last + length
 						}
 					}
 				} else {
-					fmt.Printf("\n")
+					fmt.Println()
 					break
 				}
 			}
 		}
 	}
+}
+
+func poweroftwo(count int) int {
+	if count == 0 {
+		return 1
+	}
+	return 2 * poweroftwo(count-1)
 }
 
 func ones(count int) string {
@@ -159,11 +114,11 @@ func ones(count int) string {
 	return ones
 }
 
-func length(str string) int {
+func bintodec(str string) int {
 	bin := 0
-	for i := 0; i < 3; i++ {
+	for i := 0; i < len(str); i++ {
 		bin = bin*2 + int(str[i]) - int('0')
 	}
-	// fmt.Println("Length: ", str, bin)
+	//fmt.Println("Bin to Dec: ", str, bin)
 	return bin
 }
